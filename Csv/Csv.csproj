@@ -4,17 +4,17 @@
     <Description>Really simple csv library</Description>
     <Copyright>Copyright © Steve Hansen 2015-2020</Copyright>
     <AssemblyTitle>Csv</AssemblyTitle>
-    <Authors>Steve Hansen</Authors>
-    <TargetFrameworks>net40;netstandard1.0;netstandard2.1;netcoreapp3.1</TargetFrameworks>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <AssemblyName>Csv</AssemblyName>
-    <PackageId>Csv</PackageId>
+    <Authors>Originally Steve Hansen</Authors>
+	  <TargetFrameworks>net40;netstandard1.0;netstandard2.1;netcoreapp3.1</TargetFrameworks>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AssemblyName>WCsv</AssemblyName>
+    <PackageId>WCsv</PackageId>
     <PackageTags>csv</PackageTags>
     <PackageIconUrl>https://raw.github.com/stevehansen/csv/master/Csv/icon.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageProjectUrl>https://github.com/stevehansen/csv/</PackageProjectUrl>
+    <PackageProjectUrl></PackageProjectUrl>
     <PackageLicenseUrl>https://raw.github.com/stevehansen/csv/master/LICENSE</PackageLicenseUrl>
-	<RepositoryUrl>https://github.com/stevehansen/csv.git</RepositoryUrl>
+	<RepositoryUrl></RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <NetStandardImplicitPackageVersion>1.6.0</NetStandardImplicitPackageVersion>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.0' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
@@ -27,22 +27,95 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
-    <Version>1.1</Version>
+    <Version>1.1.15</Version>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <IncludeSymbols>True</IncludeSymbols>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard1.0|AnyCPU'">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.0|AnyCPU'">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+    <WarningLevel>7</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'">
+    <WarningLevel>7</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.1|AnyCPU'">
+    <WarningLevel>5</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.1|AnyCPU'">
+    <WarningLevel>5</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net40|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net40|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net80' ">
+	  <Reference Include="System" />
+	  <Reference Include="Microsoft.CSharp" />
+	  <PackageReference Include="CommunityToolkit.HighPerformance">
+		  <Version>8.2.2</Version>
+      </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
+	    <Reference Include="System" />
+	    <Reference Include="Microsoft.CSharp" />
+    </ItemGroup>
+  
+	<ItemGroup>
     <None Include="icon.png" Pack="True" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="CommunityToolkit.HighPerformance">
+      <Version>8.2.2</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
+    <PackageReference Include="CommunityToolkit.HighPerformance">
+      <Version>8.2.2</Version>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

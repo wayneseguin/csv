@@ -172,7 +172,7 @@ namespace Csv.Tests
         [ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void InvalidHeader()
         {
-            var lines = CsvReader.ReadFromText("A\n1").ToArray();
+            var lines = CsvReader.ReadFromText("A\n1", new CsvOptions() { ReturnEmptyForMissingColumn = false }).ToArray();
             var b = lines[0]["B"];
         }
 
@@ -208,7 +208,7 @@ namespace Csv.Tests
         [ExpectedException(typeof(InvalidOperationException))]
         public void AbsentHeaderWarnDuplicate()
         {
-            CsvReader.ReadFromText(",,\n4,5,6").ToArray();
+            CsvReader.ReadFromText(",,\n4,5,6", new CsvOptions() { FixDuplicateHeaders = false }).ToArray();
 
             Assert.Fail("Expected InvalidOperationException");
         }
@@ -277,7 +277,7 @@ namespace Csv.Tests
         [TestMethod]
         public void AllowWhitespaceValues()
         {
-            var lines = CsvReader.ReadFromText("head1;head2;head3;head4\n;  ;text3;").ToArray();
+            var lines = CsvReader.ReadFromText("head1;head2;head3;head4\n;  ;text3;", new CsvOptions() { TrimData = false }).ToArray();  // good test, but assumed default value for TrimData
             Assert.AreEqual(1, lines.Length);
             Assert.AreEqual("", lines[0]["head1"]);
             Assert.AreEqual("  ", lines[0]["head2"]);
@@ -373,7 +373,7 @@ namespace Csv.Tests
         [ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void ThrowExceptionForUnknownHeaders()
         {
-            var lines = CsvReader.ReadFromText("a;b\na;b").ToArray();
+            var lines = CsvReader.ReadFromText("a;b\na;b", new CsvOptions() { ReturnEmptyForMissingColumn = false }).ToArray();
             var c = lines[0]["c"];
         }
 
@@ -398,7 +398,7 @@ namespace Csv.Tests
         [ExpectedException(typeof(InvalidOperationException))]
         public void ThrowExceptionForInvalidNumberOfCells()
         {
-            var lines = CsvReader.ReadFromText("a;b;c\na;b").ToArray();
+            var lines = CsvReader.ReadFromText("a;b;c\na;b", new CsvOptions() { ReturnEmptyForMissingColumn = false }).ToArray();
             var c = lines[0]["c"];
         }
 
@@ -565,6 +565,8 @@ namespace Csv.Tests
         {
             var options = new CsvOptions();
             options.HeaderMode = HeaderMode.HeaderAbsent;
+            options.RemoveEmbeddedQuotes = false;
+
             foreach (ICsvLine line in CsvReader.ReadFromText("one,\"two - a, two - b, \"\"two - c\"\", two - d\",three", options))
                 Assert.AreEqual(3, line.Values.Length);
         }
@@ -588,14 +590,14 @@ namespace Csv.Tests
         {
             //"A";"B";"C"
             //"A """;"B \"" ";"C"
-            var withSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\" \";\"C\"", new CsvOptions { AllowNewLineInEnclosedFieldValues = true }).ToArray();
+            var withSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\" \";\"C\"", new CsvOptions { AllowBackSlashToEscapeQuote=false, RemoveEmbeddedQuotes = true, TrimData = false }).ToArray();
             Assert.AreEqual(1, withSpace.Length);
             Assert.AreEqual(3, withSpace[0].Headers.Length);
             Assert.AreEqual("A \"", withSpace[0][0]);
             Assert.AreEqual("B \\\" ", withSpace[0][1]);
             Assert.AreEqual("C", withSpace[0][2]);
 
-            withSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\" \";\"C\"").ToArray();
+            withSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\" \";\"C\"", new CsvOptions { AllowBackSlashToEscapeQuote = false, RemoveEmbeddedQuotes = true, TrimData = false }).ToArray();
             Assert.AreEqual(1, withSpace.Length);
             Assert.AreEqual(3, withSpace[0].Headers.Length);
             Assert.AreEqual("A \"", withSpace[0][0]);
@@ -604,14 +606,14 @@ namespace Csv.Tests
 
             //"A";"B";"C"
             //"A """;"B \""";"C"
-            var withoutSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\"\";\"C\"", new CsvOptions { AllowNewLineInEnclosedFieldValues = true }).ToArray();
+            var withoutSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\"\";\"C\"", new CsvOptions { AllowBackSlashToEscapeQuote = false, RemoveEmbeddedQuotes = false, TrimData = false }).ToArray();
             Assert.AreEqual(1, withoutSpace.Length);
             Assert.AreEqual(3, withoutSpace[0].Headers.Length);
             Assert.AreEqual("A \"", withoutSpace[0][0]);
             Assert.AreEqual("B \\\"", withoutSpace[0][1]);
             Assert.AreEqual("C", withoutSpace[0][2]);
 
-            withoutSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\"\";\"C\"").ToArray();
+            withoutSpace = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\n\"A \"\"\";\"B \\\"\"\";\"C\"", new CsvOptions { AllowNewLineInEnclosedFieldValues = false, AllowBackSlashToEscapeQuote = false, TrimData = false }).ToArray();
             Assert.AreEqual(1, withoutSpace.Length);
             Assert.AreEqual(3, withoutSpace[0].Headers.Length);
             Assert.AreEqual("A \"", withoutSpace[0][0]);

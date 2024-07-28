@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
 using MemoryText = System.ReadOnlyMemory<char>;
 using SpanText = System.ReadOnlySpan<char>;
 #else
@@ -80,6 +83,12 @@ namespace Csv
             // NOTE: Logic is copied in ReadImpl/ReadImplAsync/ReadFromMemory
             options ??= new CsvOptions();
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+            // used to reduce memory footprint. the theory is most tables have repeated values
+            var stringPool = new CommunityToolkit.HighPerformance.Buffers.StringPool();
+#endif
+
+
             string? line;
             var index = 0;
             MemoryText[]? headers = null;
@@ -101,12 +110,51 @@ namespace Csv
 
                     try
                     {
-                        headerLookup = headers
-                            .Select((h, idx) => Tuple.Create(h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+                        if (!options.FixDuplicateHeaders)
+                        {
+                            headerLookup = headers
+                                .Select((h, idx) => Tuple.Create(h, idx))
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+                        }
+                        else
+                        {
+                            Dictionary<string, int> headerCounts = new Dictionary<string, int>(options.Comparer);
+
+                            headerLookup = headers
+                                .Select((h, idx) =>
+                                {
+                                    var header = h.AsString();
+                                    if (string.IsNullOrEmpty(header))
+                                        header = "Missing";
+
+                                    if (!headerCounts.TryGetValue(header, out var cnt)) // && !headers.Any(a=>string.Equals(a.AsString(), header, StringComparison.OrdinalIgnoreCase)) )
+                                    {
+                                        headerCounts[header] = 1;
+                                        return Tuple.Create(header.AsMemory(), idx);
+                                    }
+                                    else
+                                    {
+                                        var newHeader = header + (++cnt == 1 ? "" : cnt.ToString()).ToString();
+
+                                        while (headerCounts.ContainsKey(newHeader))
+                                        {
+                                            newHeader = header + (++cnt).ToString();
+                                        }
+
+                                        headerCounts[header] = cnt;
+                                        headerCounts[newHeader] = 1;
+
+                                        return Tuple.Create(newHeader.AsMemory(), idx);
+                                    }
+                                })
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+
+                            headers = headerLookup.Keys.Select(s => s.AsMemory()).ToArray();
+                        }
                     }
                     catch (ArgumentException)
                     {
+
                         throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
                     }
 
@@ -160,7 +208,7 @@ namespace Csv
             }
         }
 
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
         /// <summary>
         /// Reads the lines from the reader.
         /// </summary>
@@ -240,10 +288,42 @@ namespace Csv
 
                     try
                     {
-                        headerLookup = headers
-                            .Select((h, idx) => (h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                    }
+                        if (!options.FixDuplicateHeaders)
+                        {
+                         System.Diagnostics.Debug.WriteLine("0 - ");
+                            headerLookup = headers
+                                .Select((h, idx) => Tuple.Create(h, idx))
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+                        }
+                        else
+                        {
+                            var headerCounts = headers.GroupBy(g => g.AsString(), options.Comparer).Select(s => s.Key).ToDictionary(k=>k, v=>1, options.Comparer);
+
+                            headerLookup = headers
+                                .Select((h, idx) =>
+                                    {
+                                        var header = h.AsString();
+                                        var cnt = headerCounts[header];
+                                        if (cnt == 1)
+                                        {
+                                        System.Diagnostics.Debug.WriteLine("1 - " + h.AsString());
+                                            return Tuple.Create(h, idx);
+                                            }
+                                        else
+                                        {
+                                            var newHeader = header + cnt.ToString();
+                                            while (headerCounts.ContainsKey(newHeader))
+                                                newHeader = header + (++cnt).ToString();
+
+                                                System.Diagnostics.Debug.WriteLine("1 - " + newHeader + " " + cnt);
+
+                                            headerCounts[header] = cnt;
+
+                                            return Tuple.Create(newHeader.AsMemory(), idx);
+                                        }
+                                    })
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+                        }                    }
                     catch (ArgumentException)
                     {
                         throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
@@ -298,18 +378,21 @@ namespace Csv
         }
 #endif
 
-        private static char AutoDetectSeparator(SpanText sampleLine)
+        private static char AutoDetectSeparator(SpanText sampleLine, CsvOptions options)
         {
-            // NOTE: Try simple 'detection' of possible separator
-            // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-            foreach (var ch in sampleLine)
-            {
-                if (ch == ';' || ch == '\t')
-                    return ch;
-            }
+            // NOTE: Try advanced 'detection' of possible separator
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
+            var separatorList = sampleLine.ToArray().Where(c => options.AutoSeparators.Contains(c));
+#else
+            var separatorList = sampleLine.ToCharArray().Where(c => options.AutoSeparators.Contains(c));
+#endif
+            if (separatorList.Any())
+                return separatorList.GroupBy(g => g).OrderByDescending(o => o.Count()).FirstOrDefault()?.Key ?? ',';
 
             return ',';
+
         }
+
 
         private static MemoryText[] CreateDefaultHeaders(MemoryText line, CsvOptions options)
         {
@@ -330,7 +413,7 @@ namespace Csv
         private static void InitializeOptions(SpanText line, CsvOptions options)
         {
             if (options.Separator == '\0')
-                options.Separator = AutoDetectSeparator(line);
+                options.Separator = AutoDetectSeparator(line, options);
 
             options.Splitter = CsvLineSplitter.Get(options);
         }
@@ -351,7 +434,7 @@ namespace Csv
 
                 if (str.Length > 1)
                 {
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
                     if (str.Span[0] == '"' && str.Span[^1] == '"')
                     {
                         str = str[1..^1].Unescape('"', '"');
@@ -437,7 +520,7 @@ namespace Csv
                 return new ReadLine(headers, map, line.Index, line.Raw, new CsvOptions()) { parsedLine = values };
             }
         }
-        private sealed class ReadLine : ICsvLine
+        public class ReadLine : ICsvLine
         {
             private readonly Dictionary<string, int> headerLookup;
             private readonly CsvOptions options;
@@ -456,7 +539,11 @@ namespace Csv
 
             public string[] Headers => headers.Select(it => it.AsString()).ToArray();
 
+            public int HeaderLength => headers.Length;
+
             public string Raw { get; }
+
+            
 
             public int Index { get; }
 
@@ -468,7 +555,7 @@ namespace Csv
             {
                 get
                 {
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
                     rawSplitLine ??= SplitLine(Raw.AsMemory(), options);
 #else
                     rawSplitLine ??= SplitLine(Raw, options);
@@ -477,7 +564,13 @@ namespace Csv
                 }
             }
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+            public string[] Values => Line.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.AsString()) : it.AsString()).ToArray();
+#else
             public string[] Values => Line.Select(it => it.AsString()).ToArray();
+#endif
+
+            public int ValueLength => Line.Length;
 
             private MemoryText[] Line
             {
@@ -511,7 +604,14 @@ namespace Csv
 
                     try
                     {
+                        if(index>=Line.Length && options.ReturnEmptyForMissingColumn)
+                            return string.Empty;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+                        return options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+#else
                         return Line[index].AsString();
+#endif                    
                     }
                     catch (IndexOutOfRangeException)
                     {
@@ -520,7 +620,12 @@ namespace Csv
                 }
             }
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+            string ICsvLine.this[int index] => options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+#else
             string ICsvLine.this[int index] => Line[index].AsString();
+#endif
+
 
             public override string ToString()
             {

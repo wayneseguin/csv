@@ -1,4 +1,4 @@
-﻿#if NETCOREAPP3_1 || NETSTANDARD2_1
+﻿#if NETCOREAPP3_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
 
 using System;
 using System.Collections.Generic;
@@ -41,10 +41,44 @@ namespace Csv
 
                     try
                     {
-                        headerLookup = headers
-                            .Select((h, idx) => (h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                    }
+if (!options.FixDuplicateHeaders)
+                        {
+                            headerLookup = headers
+                                .Select((h, idx) => Tuple.Create(h, idx))
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+                        }
+                        else
+                        {
+                            Dictionary<string, int> headerCounts = new Dictionary<string, int>(options.Comparer);
+
+                            headerLookup = headers
+                                .Select((h, idx) =>
+                                    {
+                                        var header = h.AsString();
+                                        if(!headerCounts.TryGetValue(header, out var cnt)) // && !headers.Any(a=>string.Equals(a.AsString(), header, StringComparison.OrdinalIgnoreCase)) )
+                                        {
+                                            headerCounts[header] = 1;
+                                            return Tuple.Create(h, idx);
+                                        }
+                                        else
+                                        {
+                                            var newHeader = header + (++cnt==1?"":cnt.ToString()).ToString();
+
+                                            while (headerCounts.ContainsKey(newHeader))
+                                            {
+                                                newHeader = header + (++cnt).ToString();
+                                            }
+
+                                            headerCounts[header] = cnt;
+                                            headerCounts[newHeader] = 1;
+
+                                            return Tuple.Create(newHeader.AsMemory(), idx);
+                                        }
+                                    })
+                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
+
+                            headers = headerLookup.Keys.Select(s=>s.AsMemory()).ToArray();
+                        }                    }
                     catch (ArgumentException)
                     {
                         throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");

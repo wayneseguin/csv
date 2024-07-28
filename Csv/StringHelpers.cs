@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
 using MemoryText = System.ReadOnlyMemory<char>;
 using SpanText = System.ReadOnlySpan<char>;
 #else
@@ -14,7 +14,7 @@ using SpanText = System.String;
 
 namespace Csv
 {
-#if NETCOREAPP3_1 || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
 
     /// <summary>
     /// Extension methods for <see cref="ReadOnlyMemory{Char}"/> to handle common string operations.
@@ -154,11 +154,36 @@ namespace Csv
         {
             return (str1.AsString() + str2 + str3.AsString()).AsMemory();
         }
+
+        public static MemoryText RemoveQuotes(MemoryText str1, string str2)
+        {
+            Span<char> outStr = new char[str1.Length];
+            for(var i=0; i<str1.Length; i++)
+            {
+                outStr[i] = str1.Span[i];
+            }
+                
+            return (outStr.ToString().Trim().AsMemory());
+        }
 #else
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static MemoryText Concat(MemoryText str1, string str2, MemoryText str3)
         {
             return string.Concat(str1.Span, str2.AsSpan(), str3.Span).AsMemory();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static MemoryText RemoveQuotes(MemoryText str1, string str2)
+        {
+           Span<char> outStr = new char[str1.Length];
+            for(var i=0; i<str1.Length; i++)
+            {
+                outStr[i] = str1.Span[i];
+            }
+                
+            return (outStr.Trim().ToString().AsMemory());
+
+           // return str1; // (str1.Span.Replace(str2," "));
         }
 #endif
     }
@@ -193,6 +218,12 @@ namespace Csv
         public static MemoryText Concat(MemoryText str1, string str2, MemoryText str3)
         {
             return (str1 + str2 + str3);
+        }
+
+        [MethodImpl((MethodImplOptions)256 /*MethodImplOptions.AggressiveInlining*/)]
+        public static MemoryText RemoveQuotes(MemoryText str1, string str2)
+        {
+            return (str1.Replace(str2," "));
         }
     }
 

@@ -11,9 +11,19 @@ namespace Csv
         string[] Headers { get; }
 
         /// <summary>
+        /// Gets length of list of headers without having to instanciate the array.
+        /// </summary>
+        int HeaderLength { get; }
+
+        /// <summary>
         /// Gets a list of values in string format for the current row.
         /// </summary>
         string[] Values { get; }
+
+        /// <summary>
+        /// Gets length of list of values without having to instanciate the array.
+        /// </summary>
+        int ValueLength { get; }
 
         /// <summary>
         /// Gets the original raw content of the line.
