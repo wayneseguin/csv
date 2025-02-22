@@ -1,9 +1,14 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
+
+using CommunityToolkit.HighPerformance;
+
 
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
@@ -82,12 +87,6 @@ namespace Csv
         {
             // NOTE: Logic is copied in ReadImpl/ReadImplAsync/ReadFromMemory
             options ??= new CsvOptions();
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
-            // used to reduce memory footprint. the theory is most tables have repeated values
-            var stringPool = new CommunityToolkit.HighPerformance.Buffers.StringPool();
-#endif
-
 
             string? line;
             var index = 0;
@@ -208,7 +207,7 @@ namespace Csv
             }
         }
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1 || NET8_0_OR_GREATER
         /// <summary>
         /// Reads the lines from the reader.
         /// </summary>
@@ -381,7 +380,7 @@ namespace Csv
         private static char AutoDetectSeparator(SpanText sampleLine, CsvOptions options)
         {
             // NOTE: Try advanced 'detection' of possible separator
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1 || NET8_0_OR_GREATER
             var separatorList = sampleLine.ToArray().Where(c => options.AutoSeparators.Contains(c));
 #else
             var separatorList = sampleLine.ToCharArray().Where(c => options.AutoSeparators.Contains(c));
@@ -524,7 +523,7 @@ namespace Csv
         {
             private readonly Dictionary<string, int> headerLookup;
             private readonly CsvOptions options;
-            private readonly MemoryText[] headers;
+            private MemoryText[] headers;
             private IList<MemoryText>? rawSplitLine;
             internal MemoryText[]? parsedLine;
 
@@ -537,7 +536,11 @@ namespace Csv
                 Index = index;
             }
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
+            public string[] Headers => headers.Select(it => options.UseStringPool ?  options.stringPool.GetOrAdd(it.Span) : it.AsString()).ToArray();
+#else
             public string[] Headers => headers.Select(it => it.AsString()).ToArray();
+#endif
 
             public int HeaderLength => headers.Length;
 
@@ -555,7 +558,7 @@ namespace Csv
             {
                 get
                 {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                     rawSplitLine ??= SplitLine(Raw.AsMemory(), options);
 #else
                     rawSplitLine ??= SplitLine(Raw, options);
@@ -563,12 +566,6 @@ namespace Csv
                     return rawSplitLine;
                 }
             }
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
-            public string[] Values => Line.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.AsString()) : it.AsString()).ToArray();
-#else
-            public string[] Values => Line.Select(it => it.AsString()).ToArray();
-#endif
 
             public int ValueLength => Line.Length;
 
@@ -590,6 +587,14 @@ namespace Csv
                 }
             }
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            public string[] Values => Line.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.Span) : it.AsString()).ToArray();
+            //public string this[Index index] => throw new NotImplementedException();
+            public string[] this[Range range] => options.UseStringPool ? Line[range].Select(s=>options.stringPool.GetOrAdd(s.AsString())).ToArray() : Line[range].Select(s => s.ToString()).ToArray();
+#else
+            public string[] Values => new [] {"THIS SHOULD BE IMPOSSIBLE" }; // Line.Select(it => it.AsString()).ToArray();
+#endif
+
             string ICsvLine.this[string name]
             {
                 get
@@ -607,11 +612,11 @@ namespace Csv
                         if(index>=Line.Length && options.ReturnEmptyForMissingColumn)
                             return string.Empty;
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
-                        return options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                        return options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].Span) : Line[index].AsString();
 #else
                         return Line[index].AsString();
-#endif                    
+#endif
                     }
                     catch (IndexOutOfRangeException)
                     {
@@ -620,17 +625,82 @@ namespace Csv
                 }
             }
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
-            string ICsvLine.this[int index] => options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            string ICsvLine.this[Index index] => options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
 #else
             string ICsvLine.this[int index] => Line[index].AsString();
 #endif
 
 
+            public override bool Equals(object? obj)
+            {
+                return this.Equals(obj as ICsvLine);
+            }
+
             public override string ToString()
             {
-                return Raw;
+
+                return string.Join(options.Separator, Line);
             }
+
+            private int? _hashCode;
+            public override int GetHashCode()
+            {
+                if (_hashCode.HasValue)
+                    return _hashCode.Value;
+
+
+                HashCode hashCode = default;
+                for (int i = 0; i < Line.Length; i++)
+                {
+                    hashCode.Add(Line[i].AsSpan());
+                }
+
+                _hashCode = hashCode.ToHashCode();
+
+                return _hashCode.Value;
+            }
+/// <inheritdoc/>
+
+
+            public void Wipe()
+            {
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                headers = Array.Empty<MemoryText>();
+                rawSplitLine = Array.Empty<MemoryText>();
+                parsedLine = Array.Empty<MemoryText>();
+#else
+                headers = new string[0];
+                rawSplitLine = null;
+                parsedLine = null;
+#endif
+            }
+/// <inheritdoc/>
+
+            public bool Equals(ICsvLine? lineB)
+            {
+                if (lineB == null || lineB.HeaderLength != this.HeaderLength || lineB.ValueLength != this.ValueLength)
+                    return false;
+
+                return Values.SequenceEqual(lineB.Values, StringComparer.OrdinalIgnoreCase);
+
+            }
+/// <inheritdoc/>
+
+            public bool Equals(ICsvLine x, ICsvLine y)
+            {
+                if (y == null || y.HeaderLength != this.HeaderLength || y.ValueLength != this.ValueLength)
+                    return false;
+
+                return StringComparer.OrdinalIgnoreCase.Equals(x.Raw, y.Raw);
+            }
+/// <inheritdoc/>
+
+            public int GetHashCode(ICsvLine obj)
+            {
+                return obj.Raw.GetHashCode();
+            }
+
         }
     }
 }

@@ -5,7 +5,8 @@
     <Copyright>Copyright © Steve Hansen 2015-2020</Copyright>
     <AssemblyTitle>Csv</AssemblyTitle>
     <Authors>Originally Steve Hansen</Authors>
-	  <TargetFrameworks>net40;netstandard1.0;netstandard2.1;netcoreapp3.1</TargetFrameworks>
+	  <TargetFrameworks>net90;netstandard2.1</TargetFrameworks>
+	  <!--TargetFramework>net8.0</TargetFramework-->
 	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>WCsv</AssemblyName>
     <PackageId>WCsv</PackageId>
@@ -27,15 +28,22 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
-    <Version>1.1.15</Version>
-    <LangVersion>8.0</LangVersion>
+    <Version>1.1.28</Version>
+    <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <IncludeSymbols>True</IncludeSymbols>
     <OutputType>Library</OutputType>
+    <Platforms>AnyCPU;x64</Platforms>
+    <PackageOutputPath>D:\Projects\nuget\packages</PackageOutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard1.0|AnyCPU'">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard1.0|x64'">
     <WarningLevel>4</WarningLevel>
     <Optimize>True</Optimize>
   </PropertyGroup>
@@ -45,7 +53,17 @@
     <Optimize>True</Optimize>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.0|x64'">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+    <WarningLevel>7</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|x64'">
     <WarningLevel>7</WarningLevel>
     <Optimize>True</Optimize>
   </PropertyGroup>
@@ -55,7 +73,17 @@
     <Optimize>True</Optimize>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|x64'">
+    <WarningLevel>7</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.1|AnyCPU'">
+    <WarningLevel>5</WarningLevel>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.1|x64'">
     <WarningLevel>5</WarningLevel>
     <Optimize>True</Optimize>
   </PropertyGroup>
@@ -65,25 +93,58 @@
     <Optimize>True</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net40|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.1|x64'">
+    <WarningLevel>5</WarningLevel>
     <Optimize>True</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|AnyCPU'">
-    <Optimize>True</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net40|AnyCPU'">
+		<Optimize>True</Optimize>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net40|AnyCPU'">
-    <Optimize>True</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net40|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
-    <Optimize>True</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net80' ">
-	  <Reference Include="System" />
-	  <Reference Include="Microsoft.CSharp" />
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net80|AnyCPU'">
+		<Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net80|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net80|AnyCPU'">
+		<Optimize>True</Optimize>
+	</PropertyGroup>
+
+		<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net40|AnyCPU'">
+		<Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net40|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net80|AnyCPU'">
+		<Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net80|x64'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
+
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net90' ">
+		<!--Reference Include="System" />
+	  <Reference Include="Microsoft.CSharp" /-->
 	  <PackageReference Include="CommunityToolkit.HighPerformance">
 		  <Version>8.2.2</Version>
       </PackageReference>
@@ -99,7 +160,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="System.IO.Hashing" Version="9.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -108,7 +170,7 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
     <PackageReference Include="CommunityToolkit.HighPerformance">
-      <Version>8.2.2</Version>
+      <Version>8.4.0</Version>
     </PackageReference>
   </ItemGroup>
 

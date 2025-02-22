@@ -1,9 +1,14 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data.SqlTypes;
+
 namespace Csv
 {
     /// <summary>
     /// Represents a single data line inside a csv file.
     /// </summary>
-    public interface ICsvLine
+    public interface ICsvLine : IEquatable<ICsvLine>, IEqualityComparer<ICsvLine>
     {
         /// <summary>
         /// Gets the headers from the csv file.
@@ -51,10 +56,19 @@ namespace Csv
         /// <param name="name">The name of the header.</param>
         string this[string name] { get; }
 
+        void Wipe();
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        string this[Index index] { get; }
+        string[] this[Range range] { get; }
+#else
         /// <summary>
         /// Gets the data for the specified indexed header.
         /// </summary>
         /// <param name="index">The index of the header.</param>
         string this[int index] { get; }
+
+#endif
+
     }
 }

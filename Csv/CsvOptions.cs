@@ -101,7 +101,7 @@ namespace Csv
         /// </remarks>
         public string NewLine { get; set; } = Environment.NewLine;
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         /// <summary>
         /// The new line string to use when multiline field values are read, defaults to <see cref="Environment.NewLine"/>.
         /// </summary>
@@ -109,7 +109,7 @@ namespace Csv
         /// Requires <see cref="AllowNewLineInEnclosedFieldValues"/> to be set to <c>true</c> for this to have any effect.
         /// </remarks>
         public bool UseStringPool { get; set; } = true;
-        internal CommunityToolkit.HighPerformance.Buffers.StringPool stringPool = new CommunityToolkit.HighPerformance.Buffers.StringPool();
+        internal CommunityToolkit.HighPerformance.Buffers.StringPool stringPool = new CommunityToolkit.HighPerformance.Buffers.StringPool(8192);
 #endif
 
 #pragma warning disable 8618
@@ -140,6 +140,9 @@ namespace Csv
                 SkipRow = options.SkipRow,
                 Separator = options.Separator,
                 TrimData = options.TrimData,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET8_0_OR_GREATER
+                UseStringPool = options.UseStringPool,
+#endif
                 ValidateColumnCount = options.ValidateColumnCount
 
             };

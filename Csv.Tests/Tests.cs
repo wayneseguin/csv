@@ -70,6 +70,45 @@ namespace Csv.Tests
             Assert.AreEqual("D", lines[0][1]);
             Assert.AreEqual("D", lines[0]["B'"]);
         }
+                [TestMethod]
+        public void IndexFromEnd()
+        {
+            var lines = CsvReader.ReadFromText("\"A\";\"B\"\nC;D").ToArray();
+            Assert.AreEqual("C", lines[0][^2]);
+            Assert.AreEqual("C", lines[0]["A"]);
+            Assert.AreEqual("D", lines[0][^1]);
+            Assert.AreEqual("D", lines[0]["B"]);
+        }
+
+        [TestMethod]
+        public void Range()
+        {
+            var lines = CsvReader.ReadFromText("\"A\";\"B\";\"C'\"\nD;E;F").ToArray();
+            Assert.AreEqual(2, lines[0][..2].Length);
+            Assert.AreEqual(2, lines[0][1..].Length);
+            Assert.AreEqual("E", lines[0][1..][0]);
+            Assert.AreEqual("E", lines[0]["B"]);
+            Assert.AreEqual("E", lines[0][..2][^1]);
+            Assert.AreEqual("E", lines[0][1..2][0]);
+            Assert.AreEqual(1, lines[0][1..2].Length);
+        }
+
+        [TestMethod]
+        public void Equals()
+        {
+            var lines = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\nD;E;F").ToArray();
+            var linesB = CsvReader.ReadFromText("\"X\";\"Y\";\"Z\"\nD;E;F").ToArray();
+            Assert.AreEqual(true, lines[0].Equals(linesB[0]));
+        }
+        [TestMethod]
+        public void Distinct()
+        {
+            var lines = CsvReader.ReadFromText("\"A\";\"B\";\"C\"\nD;E;F\nD;G;F\nD;E;F\nD;H;F\nD;E;F").ToArray();
+            Assert.AreEqual(3, lines.Distinct().Count());
+
+            var lines2 = CsvReader.ReadFromText("\"A\";\"B\";\"C\";\"C1\";\"C2\";\"C3\";\"C4\";\"C5\";\"C6\"\nD;E;F;F;F;F;F;F;F\nD;G;F;F;F;F;F;F;F\nD;E;F;F;F;F;F;F;F\nD;H;F;F;F;F;F;F;F\nD;E;F;F;F;F;F;F;F").ToArray();
+            Assert.AreEqual(3, lines2.Distinct().Count());
+        }
 
         [TestMethod]
         [TestCategory("CsvOptions")]
@@ -744,6 +783,34 @@ namespace Csv.Tests
             Assert.AreEqual("Never", block[1]["C"]);
             Assert.AreEqual("89.64", block[2]["B"]);
             Assert.AreEqual("gonna", block[2]["C"]);
+        }
+
+        [TestMethod]
+        [TestCategory("TextPool")]
+        public void TextPoolTest_1()
+        {
+
+            var options = new CsvOptions { UseStringPool=true };
+
+            var s0 = "Never";
+            var s1 = options.stringPool.TryGet(s0, out var s2);
+            Assert.IsNull(s2);
+            Assert.IsFalse(s1);
+            options.stringPool.Add("Never");
+            s1 = options.stringPool.TryGet(s0, out  s2);
+            Assert.AreEqual(s2,"Never");
+            Assert.AreEqual(s2,s0);
+            
+            var s3 = options.stringPool.TryGet("Never", out var s4);
+            Assert.IsNotNull(s1);
+            var s5 = options.stringPool.GetOrAdd("gonna");
+            Assert.AreEqual(s5,"gonna");
+            var s6 = options.stringPool.GetOrAdd("GONNA");
+            Assert.AreNotEqual(s5, s6);
+            var s7 = s5.ToUpper();
+            var s8 = options.stringPool.GetOrAdd(s7);
+            Assert.AreEqual(s7, s8);
+
         }
     }
 }

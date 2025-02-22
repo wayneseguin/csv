@@ -16,14 +16,14 @@
     <tags>csv</tags>
   </metadata>
   <files>
-    <file src="..\Csv\bin\Release\net40\Csv.dll" target="lib\net40\Csv.dll" />
-    <file src="..\Csv\bin\Release\net40\Csv.xml" target="lib\net40\Csv.xml" />
+	  <!--file src="..\Csv\bin\Release\net40\Csv.dll" target="lib\net40\Csv.dll" />
+    <file src="..\Csv\bin\Release\net40\Csv.xml" target="lib\net40\Csv.xml" /-->
     <file src="..\Csv\bin\Release\netstandard1.0\Csv.dll" target="lib\netstandard1.0\Csv.dll" />
     <file src="..\Csv\bin\Release\netstandard1.0\Csv.xml" target="lib\netstandard1.0\Csv.xml" />
     <file src="..\Csv\bin\Release\netstandard2.1\Csv.dll" target="lib\netstandard2.1\Csv.dll" />
     <file src="..\Csv\bin\Release\netstandard2.1\Csv.xml" target="lib\netstandard2.1\Csv.xml" />
-	<file src="..\Csv\bin\Release\netcoreapp3.1\Csv.dll" target="lib\netcoreapp3.1\Csv.dll" />
-	<file src="..\Csv\bin\Release\netcoreapp3.1\Csv.xml" target="lib\netcoreapp3.1\Csv.xml" />
+	  <!--file src="..\Csv\bin\Release\netcoreapp3.1\Csv.dll" target="lib\netcoreapp3.1\Csv.dll" />
+	<file src="..\Csv\bin\Release\netcoreapp3.1\Csv.xml" target="lib\netcoreapp3.1\Csv.xml" /-->
 	<file src="..\Csv\bin\Release\net8.0\Csv.dll" target="lib\net8.0\Csv.dll" />
 	<file src="..\Csv\bin\Release\net8.0\Csv.xml" target="lib\net8.0\Csv.xml" />
   </files>
