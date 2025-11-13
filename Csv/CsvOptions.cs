@@ -61,7 +61,7 @@ namespace Csv
         public bool ValidateColumnCount { get; set; }
 
         /// <summary>
-        /// Gets or sets whether an empty string is returned for a missing column, defaults to <c>false</c>.
+        /// Gets or sets whether an empty string is returned for a missing column, defaults to <c>true</c>.
         /// </summary>
         public bool ReturnEmptyForMissingColumn { get; set; } = true;
 

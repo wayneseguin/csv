@@ -537,7 +537,7 @@ namespace Csv
             }
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1
-            public string[] Headers => headers.Select(it => options.UseStringPool ?  options.stringPool.GetOrAdd(it.Span) : it.AsString()).ToArray();
+            public string[] Headers => headers.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.Span) : it.AsString()).ToArray();
 #else
             public string[] Headers => headers.Select(it => it.AsString()).ToArray();
 #endif
@@ -546,7 +546,7 @@ namespace Csv
 
             public string Raw { get; }
 
-            
+
 
             public int Index { get; }
 
@@ -588,9 +588,30 @@ namespace Csv
             }
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            public string[] Values => Line.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.Span) : it.AsString()).ToArray();
+            public string[] Values
+            {
+                get
+                {
+                    var vals = Line.Select(it => options.UseStringPool ? options.stringPool.GetOrAdd(it.Span) : it.AsString());
+                    var cnt = vals.Count();
+                    if (cnt < HeaderLength)
+                        return vals.Concat(new string[HeaderLength - cnt].Select(s=>string.Empty)).ToArray();
+                    else
+                        return vals.Take(HeaderLength).ToArray();
+                }
+            }
             //public string this[Index index] => throw new NotImplementedException();
-            public string[] this[Range range] => options.UseStringPool ? Line[range].Select(s=>options.stringPool.GetOrAdd(s.AsString())).ToArray() : Line[range].Select(s => s.ToString()).ToArray();
+            public string[] this[Range range] {
+                get
+                {
+                    if (range.End.Value > ValueLength - 1)  // short array
+                    {
+                        var vals = Values;
+                        return options.UseStringPool ? vals[range].Select(s => options.stringPool.GetOrAdd(s)).ToArray() : vals[range].Select(s => s).ToArray();
+                    }
+                    return options.UseStringPool ? Line[range].Select(s => options.stringPool.GetOrAdd(s.AsString())).ToArray() : Line[range].Select(s => s.ToString()).ToArray();
+                }
+            }
 #else
             public string[] Values => new [] {"THIS SHOULD BE IMPOSSIBLE" }; // Line.Select(it => it.AsString()).ToArray();
 #endif
@@ -626,9 +647,27 @@ namespace Csv
             }
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            string ICsvLine.this[Index index] => options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+            string ICsvLine.this[Index index]
+            {
+                get
+                {
+                    if (index.Value >= Line.Length && options.ReturnEmptyForMissingColumn)
+                        return string.Empty;
+
+                    return options.UseStringPool ? options.stringPool.GetOrAdd(Line[index].AsString()) : Line[index].AsString();
+                }
+            }
 #else
-            string ICsvLine.this[int index] => Line[index].AsString();
+            string ICsvLine.this[int index]
+            {
+                get
+                {
+                    if (index >= Line.Length && options.ReturnEmptyForMissingColumn)
+                        return string.Empty;
+
+                    return Line[index].AsString();
+                }
+            }
 #endif
 
 
