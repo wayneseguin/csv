@@ -604,7 +604,8 @@ namespace Csv
             public string[] this[Range range] {
                 get
                 {
-                    if (range.End.Value > ValueLength - 1)  // short array
+                    var offlen = range.GetOffsetAndLength(HeaderLength);
+                    if (offlen.Offset+offlen.Length > ValueLength )  // short array
                     {
                         var vals = Values;
                         return options.UseStringPool ? vals[range].Select(s => options.stringPool.GetOrAdd(s)).ToArray() : vals[range].Select(s => s).ToArray();
