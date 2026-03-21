@@ -1,6 +1,4 @@
-﻿#if NETCOREAPP3_1 || NETSTANDARD2_1
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -39,16 +37,7 @@ namespace Csv
 
                     headers = skipInitialLine ? GetHeaders(line, options) : CreateDefaultHeaders(line, options);
 
-                    try
-                    {
-                        headerLookup = headers
-                            .Select((h, idx) => (h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
-                    }
+                    (headerLookup, headers) = DeduplicateHeaders(headers, options.Comparer);
 
                     var aliases = options.Aliases;
                     if (aliases != null)
@@ -178,5 +167,3 @@ namespace Csv
         }
     }
 }
-
-#endif

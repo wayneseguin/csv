@@ -1,5 +1,3 @@
-#if NETCOREAPP3_1 || NETSTANDARD2_1
-
 using MemoryText = System.ReadOnlyMemory<char>;
 
 namespace Csv
@@ -52,5 +50,3 @@ namespace Csv
         MemoryText this[int index] { get; }
     }
 }
-
-#endif
