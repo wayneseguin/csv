@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -117,38 +116,7 @@ namespace Csv
                         }
                         else
                         {
-                            Dictionary<string, int> headerCounts = new Dictionary<string, int>(options.Comparer);
-
-                            headerLookup = headers
-                                .Select((h, idx) =>
-                                {
-                                    var header = h.AsString();
-                                    if (string.IsNullOrEmpty(header))
-                                        header = "Missing";
-
-                                    if (!headerCounts.TryGetValue(header, out var cnt)) // && !headers.Any(a=>string.Equals(a.AsString(), header, StringComparison.OrdinalIgnoreCase)) )
-                                    {
-                                        headerCounts[header] = 1;
-                                        return Tuple.Create(header.AsMemory(), idx);
-                                    }
-                                    else
-                                    {
-                                        var newHeader = header + (++cnt == 1 ? "" : cnt.ToString()).ToString();
-
-                                        while (headerCounts.ContainsKey(newHeader))
-                                        {
-                                            newHeader = header + (++cnt).ToString();
-                                        }
-
-                                        headerCounts[header] = cnt;
-                                        headerCounts[newHeader] = 1;
-
-                                        return Tuple.Create(newHeader.AsMemory(), idx);
-                                    }
-                                })
-                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-
-                            headers = headerLookup.Keys.Select(s => s.AsMemory()).ToArray();
+                            (headerLookup, headers) = DeduplicateHeaders(headers, options.Comparer);
                         }
                     }
                     catch (ArgumentException)
@@ -289,40 +257,15 @@ namespace Csv
                     {
                         if (!options.FixDuplicateHeaders)
                         {
-                         System.Diagnostics.Debug.WriteLine("0 - ");
                             headerLookup = headers
                                 .Select((h, idx) => Tuple.Create(h, idx))
                                 .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
                         }
                         else
                         {
-                            var headerCounts = headers.GroupBy(g => g.AsString(), options.Comparer).Select(s => s.Key).ToDictionary(k=>k, v=>1, options.Comparer);
-
-                            headerLookup = headers
-                                .Select((h, idx) =>
-                                    {
-                                        var header = h.AsString();
-                                        var cnt = headerCounts[header];
-                                        if (cnt == 1)
-                                        {
-                                        System.Diagnostics.Debug.WriteLine("1 - " + h.AsString());
-                                            return Tuple.Create(h, idx);
-                                            }
-                                        else
-                                        {
-                                            var newHeader = header + cnt.ToString();
-                                            while (headerCounts.ContainsKey(newHeader))
-                                                newHeader = header + (++cnt).ToString();
-
-                                                System.Diagnostics.Debug.WriteLine("1 - " + newHeader + " " + cnt);
-
-                                            headerCounts[header] = cnt;
-
-                                            return Tuple.Create(newHeader.AsMemory(), idx);
-                                        }
-                                    })
-                                .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                        }                    }
+                            (headerLookup, headers) = DeduplicateHeaders(headers, options.Comparer);
+                        }
+                    }
                     catch (ArgumentException)
                     {
                         throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
@@ -415,6 +358,49 @@ namespace Csv
                 options.Separator = AutoDetectSeparator(line, options);
 
             options.Splitter = CsvLineSplitter.Get(options);
+        }
+
+        /// <summary>
+        /// Deduplicates headers by appending a numeric suffix to each repeated name.
+        /// Returns the updated header lookup dictionary and the canonicalized headers array.
+        /// </summary>
+        private static (Dictionary<string, int> headerLookup, MemoryText[] headers) DeduplicateHeaders(
+            MemoryText[] headers, IEqualityComparer<string> comparer)
+        {
+            var headerCounts = new Dictionary<string, int>(comparer);
+
+            var pairs = headers
+                .Select((h, idx) =>
+                {
+                    var header = h.AsString();
+                    if (string.IsNullOrEmpty(header))
+                        header = "Missing";
+
+                    if (!headerCounts.TryGetValue(header, out var cnt))
+                    {
+                        headerCounts[header] = 1;
+                        return Tuple.Create(header.AsMemory(), idx);
+                    }
+                    else
+                    {
+                        var newHeader = header + (++cnt == 1 ? "" : cnt.ToString());
+
+                        while (headerCounts.ContainsKey(newHeader))
+                        {
+                            newHeader = header + (++cnt).ToString();
+                        }
+
+                        headerCounts[header] = cnt;
+                        headerCounts[newHeader] = 1;
+
+                        return Tuple.Create(newHeader.AsMemory(), idx);
+                    }
+                })
+                .ToList();
+
+            var headerLookup = pairs.ToDictionary(h => h.Item1.AsString(), h => h.Item2, comparer);
+            var dedupedHeaders = headerLookup.Keys.Select(s => s.AsMemory()).ToArray();
+            return (headerLookup, dedupedHeaders);
         }
 
         private static IList<MemoryText> SplitLine(MemoryText line, CsvOptions options)
