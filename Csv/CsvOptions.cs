@@ -19,11 +19,7 @@ namespace Csv
         /// <summary>
         /// Gets or sets a function to skip the current row based on its raw string value or 1-based index. Skips empty rows and rows starting with # by default.
         /// </summary>
-#if NETCOREAPP3_1 || NETSTANDARD2_1
         public Func<ReadOnlyMemory<char>, int, bool> SkipRow { get; set; } = (row, idx) => row.Span.IsEmpty || row.Span[0] == '#';
-#else
-        public Func<string, int, bool> SkipRow { get; set; } = (row, idx) => string.IsNullOrEmpty(row) || row[0] == '#';
-#endif
 
         /// <summary>
         ///  Gets or sets the character to use for separating data, defaults to <c>'\0'</c> which will auto-detect from the header row.
@@ -31,9 +27,9 @@ namespace Csv
         public char Separator { get; set; }
 
         /// <summary>
-        /// Gets or sets whether data should be trimmed when accessed, defaults to <c>false</c>.
+        /// Gets or sets whether data should be trimmed when accessed, defaults to <c>true</c>.
         /// </summary>
-        public bool TrimData { get; set; }
+        public bool TrimData { get; set; } = true;
 
         /// <summary>
         /// Gets or sets the comparer to use when looking up header names.
@@ -51,9 +47,9 @@ namespace Csv
         public bool ValidateColumnCount { get; set; }
 
         /// <summary>
-        /// Gets or sets whether an empty string is returned for a missing column, defaults to <c>false</c>.
+        /// Gets or sets whether an empty string is returned for a missing column, defaults to <c>true</c>.
         /// </summary>
-        public bool ReturnEmptyForMissingColumn { get; set; }
+        public bool ReturnEmptyForMissingColumn { get; set; } = true;
 
         /// <summary>
         /// Can be used to use multiple names for a single column. (e.g. to allow "CategoryName", "Category Name", "Category-Name")

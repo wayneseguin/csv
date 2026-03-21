@@ -51,8 +51,6 @@ namespace Csv
             }
         }
 
-#if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER
-
         /// <summary>
         /// Writes the lines to the writer.
         /// </summary>
@@ -90,8 +88,6 @@ namespace Csv
             await WriteAsync(writer, headers, lines, separator, skipHeaderRow);
             return writer.ToString();
         }
-
-#endif
 
         private static void WriteLine(TextWriter writer, string[] data, int columnCount, char separator)
         {

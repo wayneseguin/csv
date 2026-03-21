@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-#if NETCOREAPP3_1 || NETSTANDARD2_1
 using MemoryText = System.ReadOnlyMemory<char>;
 using SpanText = System.ReadOnlySpan<char>;
-#else
-using MemoryText = System.String;
-using SpanText = System.String;
-#endif
 
 namespace Csv
 {
@@ -99,16 +94,7 @@ namespace Csv
 
                     headers = skipInitialLine ? GetHeaders(lineAsMemory, options) : CreateDefaultHeaders(lineAsMemory, options);
 
-                    try
-                    {
-                        headerLookup = headers
-                            .Select((h, idx) => Tuple.Create(h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
-                    }
+                    (headerLookup, headers) = DeduplicateHeaders(headers, options.Comparer);
 
                     var aliases = options.Aliases;
                     if (aliases != null)
@@ -160,7 +146,6 @@ namespace Csv
             }
         }
 
-#if NETCOREAPP3_1 || NETSTANDARD2_1
         /// <summary>
         /// Reads the lines from the reader.
         /// </summary>
@@ -238,16 +223,7 @@ namespace Csv
 
                     headers = skipInitialLine ? GetHeaders(lineAsMemory, options) : CreateDefaultHeaders(lineAsMemory, options);
 
-                    try
-                    {
-                        headerLookup = headers
-                            .Select((h, idx) => (h, idx))
-                            .ToDictionary(h => h.Item1.AsString(), h => h.Item2, options.Comparer);
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw new InvalidOperationException("Duplicate headers detected in HeaderPresent mode. If you don't have a header you can set the HeaderMode to HeaderAbsent.");
-                    }
+                    (headerLookup, headers) = DeduplicateHeaders(headers, options.Comparer);
 
                     var aliases = options.Aliases;
                     if (aliases != null)
@@ -296,7 +272,6 @@ namespace Csv
                 yield return record;
             }
         }
-#endif
 
         private static char AutoDetectSeparator(SpanText sampleLine)
         {
@@ -335,6 +310,49 @@ namespace Csv
             options.Splitter = CsvLineSplitter.Get(options);
         }
 
+        /// <summary>
+        /// Deduplicates headers by appending a numeric suffix to each repeated name.
+        /// Returns the updated header lookup dictionary and the canonicalized headers array.
+        /// </summary>
+        private static (Dictionary<string, int> headerLookup, MemoryText[] headers) DeduplicateHeaders(
+            MemoryText[] headers, IEqualityComparer<string>? comparer)
+        {
+            var headerCounts = new Dictionary<string, int>(comparer);
+
+            var pairs = headers
+                .Select((h, idx) =>
+                {
+                    var header = h.AsString();
+                    if (string.IsNullOrEmpty(header))
+                        header = "Missing";
+
+                    if (!headerCounts.TryGetValue(header, out var cnt))
+                    {
+                        headerCounts[header] = 1;
+                        return Tuple.Create(header.AsMemory(), idx);
+                    }
+                    else
+                    {
+                        var newHeader = header + (++cnt == 1 ? "" : cnt.ToString());
+
+                        while (headerCounts.ContainsKey(newHeader))
+                        {
+                            newHeader = header + (++cnt).ToString();
+                        }
+
+                        headerCounts[header] = cnt;
+                        headerCounts[newHeader] = 1;
+
+                        return Tuple.Create(newHeader.AsMemory(), idx);
+                    }
+                })
+                .ToList();
+
+            var headerLookup = pairs.ToDictionary(h => h.Item1.AsString(), h => h.Item2, comparer);
+            var dedupedHeaders = headerLookup.Keys.Select(s => s.AsMemory()).ToArray();
+            return (headerLookup, dedupedHeaders);
+        }
+
         private static IList<MemoryText> SplitLine(MemoryText line, CsvOptions options)
         {
             return options.Splitter.Split(line, options);
@@ -351,7 +369,6 @@ namespace Csv
 
                 if (str.Length > 1)
                 {
-#if NETCOREAPP3_1 || NETSTANDARD2_1
                     if (str.Span[0] == '"' && str.Span[^1] == '"')
                     {
                         str = str[1..^1].Unescape('"', '"');
@@ -361,17 +378,6 @@ namespace Csv
                     }
                     else if (options.AllowSingleQuoteToEncloseFieldValues && str.Span[0] == '\'' && str.Span[^1] == '\'')
                         str = str[1..^1];
-#else
-                    if (str[0] == '"' && str[str.Length - 1] == '"')
-                    {
-                        str = str.Substring(1, str.Length - 2).Replace("\"\"", "\"");
-
-                        if (options.AllowBackSlashToEscapeQuote)
-                            str = str.Replace("\\\"", "\"");
-                    }
-                    else if (options.AllowSingleQuoteToEncloseFieldValues && str[0] == '\'' && str[str.Length - 1] == '\'')
-                        str = str.Substring(1, str.Length - 2);
-#endif
                 }
 
                 trimmed[i] = str;
@@ -468,11 +474,7 @@ namespace Csv
             {
                 get
                 {
-#if NETCOREAPP3_1 || NETSTANDARD2_1
                     rawSplitLine ??= SplitLine(Raw.AsMemory(), options);
-#else
-                    rawSplitLine ??= SplitLine(Raw, options);
-#endif
                     return rawSplitLine;
                 }
             }
